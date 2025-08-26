@@ -51,6 +51,7 @@ class _RulerExampleState extends State<RulerExample> {
                 showSubLabels: false,
                 labelSpacing: 6,
                 labelRotation: 0,
+                tickSpacing: 20,
                 matchValues: _computeMidpoints(
                   minValue: 20,
                   maxValue: 100,

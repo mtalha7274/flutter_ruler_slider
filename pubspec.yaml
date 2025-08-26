@@ -1,6 +1,6 @@
 name: flutter_ruler_slider
 description: "Customizable horizontal ruler slider with snapping, labels, and tick styling for Flutter."
-version: 0.0.2
+version: 0.0.3
 repository: "https://github.com/mtalha7274/flutter_ruler_slider"
 
 environment:

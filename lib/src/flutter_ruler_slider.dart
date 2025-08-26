@@ -142,6 +142,16 @@ class FlutterRulerSlider extends StatefulWidget {
   /// [RulerTickStyle.matchThickness], and [RulerTickStyle.matchColor].
   final List<int>? matchValues;
 
+  /// Optional custom labels to display under ticks.
+  ///
+  /// When provided, they are normalized to match the number of labels that
+  /// would normally be generated (major-only or including sublabels depending
+  /// on [showSubLabels]) using the rules:
+  /// - If equal length, use as-is.
+  /// - If fewer, append the tail slice from generated labels to match length.
+  /// - If more, trim extras from the end.
+  final List<String>? customLabels;
+
   /// Creates a [FlutterRulerSlider].
   const FlutterRulerSlider({
     super.key,
@@ -165,6 +175,7 @@ class FlutterRulerSlider extends StatefulWidget {
     this.labelStyle,
     this.tickStyle = const RulerTickStyle(),
     this.matchValues,
+    this.customLabels,
   }) : assert(minValue < maxValue),
        assert(initialValue >= minValue && initialValue <= maxValue),
        assert(smallerInterval > 0);
@@ -243,6 +254,9 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
   Widget build(BuildContext context) {
     final halfWidthPad = SizedBox(width: widget.width / 2);
 
+    // Precompute the labels that should be shown and map them to tick indices.
+    final _LabelMapping labelMapping = _computeLabelMapping();
+
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (!widget.snapping) return false;
@@ -278,11 +292,15 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
                 final isFirst = tickIndex == 0;
                 final isLast = tickIndex == _tickCount - 1;
 
+                final String effectiveLabel =
+                    labelMapping.labelsByTickIndex[tickIndex] ??
+                    tickValue.toString();
+
                 final tickWidget = CustomPaint(
                   painter: _TickPainter(
                     isMajor: isMajor,
                     isMatched: isMatched,
-                    label: tickValue.toString(),
+                    label: effectiveLabel,
                     showLabel:
                         widget.showLabels && (isMajor || widget.showSubLabels),
                     labelSpacing: widget.labelSpacing,
@@ -333,6 +351,81 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
     _scroll.dispose();
     _snapTimer?.cancel();
     super.dispose();
+  }
+}
+
+class _LabelMapping {
+  final Map<int, String> labelsByTickIndex;
+  const _LabelMapping(this.labelsByTickIndex);
+}
+
+extension on _RulerSliderState {
+  _LabelMapping _computeLabelMapping() {
+    if (!widget.showLabels) {
+      return const _LabelMapping(<int, String>{});
+    }
+
+    // Determine which tick indices will show labels
+    final List<int> labelTickIndices = <int>[];
+    for (int i = 0; i < _tickCount; i++) {
+      final bool isMajor = (i % widget.interval) == 0;
+      if (isMajor || widget.showSubLabels) {
+        labelTickIndices.add(i);
+      }
+    }
+
+    if (labelTickIndices.isEmpty) {
+      return const _LabelMapping(<int, String>{});
+    }
+
+    // Generated labels as strings
+    final List<String> generatedLabels = labelTickIndices
+        .map((i) => (widget.minValue + i).toString())
+        .toList(growable: false);
+
+    final List<String>? custom = widget.customLabels;
+    if (custom == null || custom.isEmpty) {
+      // No custom labels provided; default behavior uses generated labels in painter
+      return const _LabelMapping(<int, String>{});
+    }
+
+    // Normalize custom labels to match generated labels length
+    final int desiredLength = generatedLabels.length;
+    List<String> normalized = List<String>.from(custom);
+
+    if (normalized.length > desiredLength) {
+      normalized = normalized.sublist(0, desiredLength);
+    } else if (normalized.length < desiredLength) {
+      final List<String> toAppendReversed = <String>[];
+      int gi = generatedLabels.length - 1;
+      while (normalized.length + toAppendReversed.length < desiredLength &&
+          gi >= 0) {
+        final String candidate = generatedLabels[gi];
+        if (normalized.isEmpty || candidate != normalized.last) {
+          toAppendReversed.add(candidate);
+        }
+        gi--;
+      }
+      // Append in correct order
+      toAppendReversed.reversed.forEach(normalized.add);
+      // If still short (shouldn't happen), pad from start of generated
+      int si = 0;
+      while (normalized.length < desiredLength && si < generatedLabels.length) {
+        if (normalized.isEmpty || generatedLabels[si] != normalized.last) {
+          normalized.add(generatedLabels[si]);
+        } else {
+          normalized.add(generatedLabels[si]);
+        }
+        si++;
+      }
+    }
+
+    // Build mapping from tick indices to labels in order
+    final Map<int, String> map = <int, String>{};
+    for (int k = 0; k < labelTickIndices.length; k++) {
+      map[labelTickIndices[k]] = normalized[k];
+    }
+    return _LabelMapping(map);
   }
 }
 
