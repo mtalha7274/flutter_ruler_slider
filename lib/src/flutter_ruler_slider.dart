@@ -2,12 +2,16 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// Styling options for ruler ticks (major and minor).
+/// Styling options for ruler ticks (major, minor, and matched).
 ///
 /// Use this to control the visual appearance of tick marks:
 /// - Heights define how tall each tick line is.
 /// - Thickness controls the stroke width.
 /// - Colors set the paint color per tick type.
+///
+/// Matched ticks are those whose values are included in
+/// [FlutterRulerSlider.matchValues]. Matched properties have explicit defaults
+/// (height 15.0, thickness 1.2, color transparent).
 class RulerTickStyle {
   /// Height of each major tick line in logical pixels.
   final double majorHeight;
@@ -15,11 +19,22 @@ class RulerTickStyle {
   /// Height of each minor (sub) tick line in logical pixels.
   final double minorHeight;
 
+  /// Height of a matched tick line in logical pixels.
+  ///
+  /// Defaults to 15.0. A tick is considered
+  /// "matched" when its value is included in [FlutterRulerSlider.matchValues].
+  final double matchHeight;
+
   /// Stroke width of major tick lines.
   final double majorThickness;
 
   /// Stroke width of minor tick lines.
   final double minorThickness;
+
+  /// Stroke width of matched tick lines.
+  ///
+  /// Defaults to 1.2.
+  final double matchThickness;
 
   /// Color used to paint major tick lines.
   final Color majorColor;
@@ -27,14 +42,22 @@ class RulerTickStyle {
   /// Color used to paint minor tick lines.
   final Color minorColor;
 
+  /// Color used to paint matched tick lines.
+  ///
+  /// Defaults to [Colors.transparent].
+  final Color matchColor;
+
   /// Creates a tick style with sensible defaults.
   const RulerTickStyle({
     this.majorHeight = 30.0,
     this.minorHeight = 15.0,
+    this.matchHeight = 15.0,
     this.majorThickness = 1.2,
     this.minorThickness = 1.2,
+    this.matchThickness = 1.2,
     this.majorColor = Colors.black,
     this.minorColor = Colors.black,
+    this.matchColor = Colors.transparent,
   });
 }
 
@@ -46,6 +69,10 @@ class RulerTickStyle {
 /// - Major tick labels can be shown, and optionally on minor ticks via
 ///   [showSubLabels]. All labels are aligned along a common baseline defined by
 ///   the major tick height and [labelSpacing].
+/// - You can highlight specific ticks as "matched" via [matchValues]. Matched
+///   ticks use [RulerTickStyle.matchHeight], [RulerTickStyle.matchThickness],
+///   and [RulerTickStyle.matchColor]. These have explicit defaults
+///   (15.0, 1.2, transparent).
 class FlutterRulerSlider extends StatefulWidget {
   /// Inclusive minimum value represented by the first tick.
   final int minValue, maxValue;
@@ -108,6 +135,13 @@ class FlutterRulerSlider extends StatefulWidget {
   /// Visual style for tick marks (heights, thicknesses, colors).
   final RulerTickStyle tickStyle;
 
+  /// List of integer values whose ticks should be rendered as "matched".
+  ///
+  /// A tick is considered matched when its integer value exists in this list.
+  /// Matched ticks use the styling provided by [RulerTickStyle.matchHeight],
+  /// [RulerTickStyle.matchThickness], and [RulerTickStyle.matchColor].
+  final List<int>? matchValues;
+
   /// Creates a [FlutterRulerSlider].
   const FlutterRulerSlider({
     super.key,
@@ -130,6 +164,7 @@ class FlutterRulerSlider extends StatefulWidget {
     this.labelRotation = 0,
     this.labelStyle,
     this.tickStyle = const RulerTickStyle(),
+    this.matchValues,
   }) : assert(minValue < maxValue),
        assert(initialValue >= minValue && initialValue <= maxValue),
        assert(smallerInterval > 0);
@@ -238,12 +273,15 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
                 final tickValue = widget.minValue + tickIndex;
                 // Major ticks every `interval` starting at minValue
                 final isMajor = (tickIndex % widget.interval) == 0;
+                final isMatched =
+                    widget.matchValues?.contains(tickValue) ?? false;
                 final isFirst = tickIndex == 0;
                 final isLast = tickIndex == _tickCount - 1;
 
                 final tickWidget = CustomPaint(
                   painter: _TickPainter(
                     isMajor: isMajor,
+                    isMatched: isMatched,
                     label: tickValue.toString(),
                     showLabel:
                         widget.showLabels && (isMajor || widget.showSubLabels),
@@ -300,6 +338,7 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
 
 class _TickPainter extends CustomPainter {
   final bool isMajor;
+  final bool isMatched;
   final bool showLabel;
   final String label;
   final double labelSpacing;
@@ -309,6 +348,7 @@ class _TickPainter extends CustomPainter {
 
   _TickPainter({
     required this.isMajor,
+    required this.isMatched,
     required this.showLabel,
     required this.label,
     required this.labelSpacing,
@@ -319,11 +359,16 @@ class _TickPainter extends CustomPainter {
 
   @override
   void paint(Canvas c, Size s) {
-    final double length = isMajor ? style.majorHeight : style.minorHeight;
-    final double strokeWidth = isMajor
-        ? style.majorThickness
-        : style.minorThickness;
-    final Color color = isMajor ? style.majorColor : style.minorColor;
+    final bool useMatched = isMatched;
+    final double length = useMatched
+        ? style.matchHeight
+        : (isMajor ? style.majorHeight : style.minorHeight);
+    final double strokeWidth = useMatched
+        ? style.matchThickness
+        : (isMajor ? style.majorThickness : style.minorThickness);
+    final Color color = useMatched
+        ? style.matchColor
+        : (isMajor ? style.majorColor : style.minorColor);
 
     final paint = Paint()
       ..color = color
@@ -362,6 +407,7 @@ class _TickPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TickPainter old) =>
       old.isMajor != isMajor ||
+      old.isMatched != isMatched ||
       old.label != label ||
       old.showLabel != showLabel ||
       old.labelSpacing != labelSpacing ||

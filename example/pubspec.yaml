@@ -11,7 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_ruler:
+  flutter_ruler_slider:
     path: ../
   cupertino_icons: ^1.0.8
 
