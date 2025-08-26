@@ -20,7 +20,7 @@ class RulerTickStyle {
   });
 }
 
-class FlutterRuler extends StatefulWidget {
+class FlutterRulerSlider extends StatefulWidget {
   final int minValue, maxValue;
   final int interval;
   final int smallerInterval;
@@ -39,7 +39,7 @@ class FlutterRuler extends StatefulWidget {
   final TextStyle? labelStyle;
   final RulerTickStyle tickStyle;
 
-  const FlutterRuler({
+  const FlutterRulerSlider({
     super.key,
     required this.minValue,
     required this.maxValue,
@@ -65,10 +65,10 @@ class FlutterRuler extends StatefulWidget {
        assert(smallerInterval > 0);
 
   @override
-  State<FlutterRuler> createState() => _RulerSliderState();
+  State<FlutterRulerSlider> createState() => _RulerSliderState();
 }
 
-class _RulerSliderState extends State<FlutterRuler> {
+class _RulerSliderState extends State<FlutterRulerSlider> {
   late final ScrollController _scroll;
   double? _lastValue;
   Timer? _snapTimer;
