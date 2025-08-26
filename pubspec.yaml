@@ -1,7 +1,7 @@
 name: flutter_ruler_slider
 description: "A new Flutter package project."
 version: 0.0.1
-homepage:
+repository: "https://github.com/mtalha7274/flutter_ruler_slider"
 
 environment:
   sdk: ^3.9.0
