@@ -2,14 +2,32 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+/// Styling options for ruler ticks (major and minor).
+///
+/// Use this to control the visual appearance of tick marks:
+/// - Heights define how tall each tick line is.
+/// - Thickness controls the stroke width.
+/// - Colors set the paint color per tick type.
 class RulerTickStyle {
+  /// Height of each major tick line in logical pixels.
   final double majorHeight;
+
+  /// Height of each minor (sub) tick line in logical pixels.
   final double minorHeight;
+
+  /// Stroke width of major tick lines.
   final double majorThickness;
+
+  /// Stroke width of minor tick lines.
   final double minorThickness;
+
+  /// Color used to paint major tick lines.
   final Color majorColor;
+
+  /// Color used to paint minor tick lines.
   final Color minorColor;
 
+  /// Creates a tick style with sensible defaults.
   const RulerTickStyle({
     this.majorHeight = 30.0,
     this.minorHeight = 15.0,
@@ -20,25 +38,77 @@ class RulerTickStyle {
   });
 }
 
+/// A horizontally scrollable, snap-capable ruler slider with tick marks and labels.
+///
+/// - Drag freely to update the value continuously.
+/// - When [snapping] is true, the scroll position animates to the nearest whole
+///   tick after the scroll ends.
+/// - Major tick labels can be shown, and optionally on minor ticks via
+///   [showSubLabels]. All labels are aligned along a common baseline defined by
+///   the major tick height and [labelSpacing].
 class FlutterRulerSlider extends StatefulWidget {
+  /// Inclusive minimum value represented by the first tick.
   final int minValue, maxValue;
+
+  /// Interval (in value units) between major ticks and labels.
+  ///
+  /// For example, with `minValue = 0`, `interval = 10`, you get labels at
+  /// 0, 10, 20, ...
   final int interval;
+
+  /// Number of sub-steps within 1 whole value unit.
+  ///
+  /// Determines the granularity of the reported [onValueChanged] value while
+  /// scrolling between two integer ticks. For example, `smallerInterval = 10`
+  /// allows values like 35.1, 35.2, ...
   final int smallerInterval;
+
+  /// Spacing in logical pixels between adjacent integer ticks.
   final double tickSpacing;
+
+  /// Fixed size of the widget.
   final double width, height;
+
+  /// Initial selected integer value. Must be within [minValue] and [maxValue].
   final int initialValue;
+
+  /// Called whenever the current value changes due to scrolling or snapping.
+  ///
+  /// The value can be fractional depending on [smallerInterval].
   final ValueChanged<double>? onValueChanged;
+
+  /// Widget rendered as the central indicator (defaults to a red vertical line).
   final Widget? centerIndicator;
+
+  /// When true, snap to the nearest tick after scrolling ends.
   final bool snapping;
+
+  /// Duration of the snapping animation when [snapping] is true.
   final Duration snappingDuration;
+
+  /// Curve of the snapping animation when [snapping] is true.
   final Curve snappingCurve;
+
+  /// Whether to show labels under ticks.
   final bool showLabels;
+
+  /// When [showLabels] is true, also show labels under minor ticks.
   final bool showSubLabels;
+
+  /// Vertical spacing between the bottom of the major tick and the label
+  /// baseline.
   final double labelSpacing;
+
+  /// Label rotation in degrees (clockwise), applied around label center.
   final double labelRotation;
+
+  /// Text style applied to labels (defaults to 12sp black when null).
   final TextStyle? labelStyle;
+
+  /// Visual style for tick marks (heights, thicknesses, colors).
   final RulerTickStyle tickStyle;
 
+  /// Creates a [FlutterRulerSlider].
   const FlutterRulerSlider({
     super.key,
     required this.minValue,

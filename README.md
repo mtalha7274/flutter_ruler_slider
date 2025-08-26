@@ -3,7 +3,9 @@
 A highly customizable, horizontally scrollable ruler slider for Flutter. Drag freely and optionally snap to the nearest tick. Supports major/minor ticks, aligned labels (with rotation and spacing), and full tick styling (heights, thickness, and colors).
 
 ### Demo
-Add a GIF here showcasing the slider behavior.
+<p align="center">
+  <img src="https://s14.gifyu.com/images/bNPMW.gif" alt="Demo GIF" />
+</p>
 
 ### Install
 Run:
