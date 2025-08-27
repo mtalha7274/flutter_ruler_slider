@@ -1,3 +1,8 @@
+## 0.0.4
+
+- Added ticks alignment
+- Changed naming conventions 
+
 ## 0.0.3
 
 - Custom labels support added

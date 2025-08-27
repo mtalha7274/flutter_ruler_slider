@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 /// Matched ticks are those whose values are included in
 /// [FlutterRulerSlider.matchValues]. Matched properties have explicit defaults
 /// (height 15.0, thickness 1.2, color transparent).
-class RulerTickStyle {
+class TicksStyle {
   /// Height of each major tick line in logical pixels.
   final double majorHeight;
 
@@ -48,7 +48,7 @@ class RulerTickStyle {
   final Color matchColor;
 
   /// Creates a tick style with sensible defaults.
-  const RulerTickStyle({
+  const TicksStyle({
     this.majorHeight = 30.0,
     this.minorHeight = 15.0,
     this.matchHeight = 15.0,
@@ -61,6 +61,13 @@ class RulerTickStyle {
   });
 }
 
+/// Vertical alignment for ruler tick marks.
+///
+/// - [center]: Ticks are centered vertically (existing behavior).
+/// - [top]: Ticks start at the top and extend downward.
+/// - [bottom]: Ticks start at the bottom and extend upward.
+enum TicksAlignment { center, top, bottom }
+
 /// A horizontally scrollable, snap-capable ruler slider with tick marks and labels.
 ///
 /// - Drag freely to update the value continuously.
@@ -70,8 +77,8 @@ class RulerTickStyle {
 ///   [showSubLabels]. All labels are aligned along a common baseline defined by
 ///   the major tick height and [labelSpacing].
 /// - You can highlight specific ticks as "matched" via [matchValues]. Matched
-///   ticks use [RulerTickStyle.matchHeight], [RulerTickStyle.matchThickness],
-///   and [RulerTickStyle.matchColor]. These have explicit defaults
+///   ticks use [TicksStyle.matchHeight], [TicksStyle.matchThickness],
+///   and [TicksStyle.matchColor]. These have explicit defaults
 ///   (15.0, 1.2, transparent).
 class FlutterRulerSlider extends StatefulWidget {
   /// Inclusive minimum value represented by the first tick.
@@ -133,13 +140,20 @@ class FlutterRulerSlider extends StatefulWidget {
   final TextStyle? labelStyle;
 
   /// Visual style for tick marks (heights, thicknesses, colors).
-  final RulerTickStyle tickStyle;
+  final TicksStyle tickStyle;
+
+  /// Vertical alignment of ruler ticks.
+  ///
+  /// Defaults to [TicksAlignment.center]. When set to [TicksAlignment.top],
+  /// ticks (major, minor, and matched) originate from the top. When set to
+  /// [TicksAlignment.bottom], ticks originate from the bottom.
+  final TicksAlignment ticksAlignment;
 
   /// List of integer values whose ticks should be rendered as "matched".
   ///
   /// A tick is considered matched when its integer value exists in this list.
-  /// Matched ticks use the styling provided by [RulerTickStyle.matchHeight],
-  /// [RulerTickStyle.matchThickness], and [RulerTickStyle.matchColor].
+  /// Matched ticks use the styling provided by [TicksStyle.matchHeight],
+  /// [TicksStyle.matchThickness], and [TicksStyle.matchColor].
   final List<int>? matchValues;
 
   /// Optional custom labels to display under ticks.
@@ -173,7 +187,8 @@ class FlutterRulerSlider extends StatefulWidget {
     this.labelSpacing = 4,
     this.labelRotation = 0,
     this.labelStyle,
-    this.tickStyle = const RulerTickStyle(),
+    this.tickStyle = const TicksStyle(),
+    this.ticksAlignment = TicksAlignment.center,
     this.matchValues,
     this.customLabels,
   }) : assert(minValue < maxValue),
@@ -309,6 +324,7 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
                         widget.labelStyle ??
                         const TextStyle(fontSize: 12, color: Colors.black),
                     style: widget.tickStyle,
+                    alignment: widget.ticksAlignment,
                   ),
                   child: SizedBox(
                     width: isFirst || isLast ? 0 : widget.tickSpacing,
@@ -437,7 +453,8 @@ class _TickPainter extends CustomPainter {
   final double labelSpacing;
   final double labelRotation;
   final TextStyle labelTextStyle;
-  final RulerTickStyle style;
+  final TicksStyle style;
+  final TicksAlignment alignment;
 
   _TickPainter({
     required this.isMajor,
@@ -448,6 +465,7 @@ class _TickPainter extends CustomPainter {
     required this.labelRotation,
     required this.labelTextStyle,
     required this.style,
+    required this.alignment,
   });
 
   @override
@@ -468,12 +486,24 @@ class _TickPainter extends CustomPainter {
       ..strokeWidth = strokeWidth;
 
     final centerY = s.height / 2;
+    double startY;
+    double endY;
+    switch (alignment) {
+      case TicksAlignment.center:
+        startY = centerY - length / 2;
+        endY = centerY + length / 2;
+        break;
+      case TicksAlignment.top:
+        startY = 0;
+        endY = length;
+        break;
+      case TicksAlignment.bottom:
+        startY = s.height - length;
+        endY = s.height;
+        break;
+    }
 
-    c.drawLine(
-      Offset(s.width / 2, centerY - length / 2),
-      Offset(s.width / 2, centerY + length / 2),
-      paint,
-    );
+    c.drawLine(Offset(s.width / 2, startY), Offset(s.width / 2, endY), paint);
 
     if (showLabel) {
       final tp = TextPainter(
@@ -481,8 +511,27 @@ class _TickPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       final dx = (s.width - tp.width) / 2;
-      // Align labels using the major tick height baseline
-      final dy = centerY + style.majorHeight / 2 + labelSpacing;
+      double dy;
+      switch (alignment) {
+        case TicksAlignment.center:
+          // Align labels using the major tick height baseline
+          dy = centerY + style.majorHeight / 2 + labelSpacing;
+          break;
+        case TicksAlignment.top:
+          // Place labels below the top-aligned ticks
+          dy =
+              (isMatched ? style.matchHeight : style.majorHeight) +
+              labelSpacing;
+          break;
+        case TicksAlignment.bottom:
+          // Place labels above the bottom-aligned ticks
+          dy =
+              s.height -
+              (isMatched ? style.matchHeight : style.majorHeight) -
+              labelSpacing -
+              tp.height;
+          break;
+      }
 
       if (labelRotation.abs() > 1e-6) {
         c.save();

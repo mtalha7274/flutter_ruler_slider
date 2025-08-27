@@ -31,7 +31,8 @@ FlutterRulerSlider(
   labelSpacing: 6,
   labelRotation: 0,
   tickSpacing: 20,
-  tickStyle: const RulerTickStyle(
+  ticksAlignment: TicksAlignment.center,
+  tickStyle: const TicksStyle(
     majorHeight: 30,
     minorHeight: 15,
     majorThickness: 2,
@@ -46,7 +47,7 @@ FlutterRulerSlider(
 ```
 
 ### Matched ticks
-Highlight specific ticks by value using `matchValues`. Matched ticks use `RulerTickStyle.matchHeight`, `matchThickness`, and `matchColor` (defaults: 15.0, 1.2, transparent).
+Highlight specific ticks by value using `matchValues`. Matched ticks use `TicksStyle.matchHeight`, `matchThickness`, and `matchColor` (defaults: 15.0, 1.2, transparent).
 
 Example: highlight midpoints between major ticks in the example app:
 
@@ -75,7 +76,7 @@ FlutterRulerSlider(
   width: 300,
   initialValue: 36,
   matchValues: _computeMidpoints(minValue: 20, maxValue: 100, interval: 10),
-  tickStyle: const RulerTickStyle(matchColor: Colors.transparent),
+  tickStyle: const TicksStyle(matchColor: Colors.transparent),
 )
 ```
 
