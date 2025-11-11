@@ -57,7 +57,8 @@ class _RulerExampleState extends State<RulerExample> {
                   maxValue: 100,
                   interval: 10,
                 ),
-                ticksAlignment: TicksAlignment.center,
+                ticksAlignment: TicksAlignment.top,
+                labelAlignment: LabelAlignment.bottom,
                 tickStyle: const TicksStyle(
                   majorHeight: 30,
                   minorHeight: 15,

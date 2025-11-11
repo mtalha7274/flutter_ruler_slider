@@ -32,6 +32,8 @@ FlutterRulerSlider(
   labelRotation: 0,
   tickSpacing: 20,
   ticksAlignment: TicksAlignment.center,
+  labelAlignment: LabelAlignment.bottom,
+  label
   tickStyle: const TicksStyle(
     majorHeight: 30,
     minorHeight: 15,

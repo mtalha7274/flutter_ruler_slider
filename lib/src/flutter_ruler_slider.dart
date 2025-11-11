@@ -68,6 +68,12 @@ class TicksStyle {
 /// - [bottom]: Ticks start at the bottom and extend upward.
 enum TicksAlignment { center, top, bottom }
 
+/// Vertical alignment for labels relative to major tick marks.
+///
+/// - [top]: Labels are positioned above the top edge of major ticks.
+/// - [bottom]: Labels are positioned below the bottom edge of major ticks.
+enum LabelAlignment { top, bottom }
+
 /// A horizontally scrollable, snap-capable ruler slider with tick marks and labels.
 ///
 /// - Drag freely to update the value continuously.
@@ -112,7 +118,7 @@ class FlutterRulerSlider extends StatefulWidget {
   final ValueChanged<double>? onValueChanged;
 
   /// Widget rendered as the central indicator (defaults to a red vertical line).
-  final Widget? centerIndicator;
+  final Widget? indicator;
 
   /// When true, snap to the nearest tick after scrolling ends.
   final bool snapping;
@@ -129,8 +135,7 @@ class FlutterRulerSlider extends StatefulWidget {
   /// When [showLabels] is true, also show labels under minor ticks.
   final bool showSubLabels;
 
-  /// Vertical spacing between the bottom of the major tick and the label
-  /// baseline.
+  /// Vertical spacing between the major tick and the labels.
   final double labelSpacing;
 
   /// Label rotation in degrees (clockwise), applied around label center.
@@ -138,6 +143,14 @@ class FlutterRulerSlider extends StatefulWidget {
 
   /// Text style applied to labels (defaults to 12sp black when null).
   final TextStyle? labelStyle;
+
+  /// Vertical alignment for labels (top or bottom).
+  ///
+  /// Defaults to [LabelAlignment.bottom]. When set to bottom, labels are
+  /// positioned below the major tick's bottom edge. When set to top, labels
+  /// are positioned above the major tick's top edge. Distance is controlled
+  /// by [labelSpacing].
+  final LabelAlignment labelAlignment;
 
   /// Visual style for tick marks (heights, thicknesses, colors).
   final TicksStyle tickStyle;
@@ -178,7 +191,7 @@ class FlutterRulerSlider extends StatefulWidget {
     this.tickSpacing = 20,
     this.height = 100,
     this.onValueChanged,
-    this.centerIndicator,
+    this.indicator,
     this.snapping = false,
     this.snappingDuration = const Duration(milliseconds: 200),
     this.snappingCurve = Curves.linear,
@@ -187,6 +200,7 @@ class FlutterRulerSlider extends StatefulWidget {
     this.labelSpacing = 4,
     this.labelRotation = 0,
     this.labelStyle,
+    this.labelAlignment = LabelAlignment.bottom,
     this.tickStyle = const TicksStyle(),
     this.ticksAlignment = TicksAlignment.center,
     this.matchValues,
@@ -284,82 +298,103 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
         }
         return false;
       },
-      child: SizedBox(
-        width: widget.width,
-        height: widget.height,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            ListView.builder(
-              controller: _scroll,
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              itemCount: _tickCount + 2,
-              itemBuilder: (ctx, i) {
-                if (i == 0 || i == _tickCount + 1) return halfWidthPad;
+      child: ClipRect(
+        clipBehavior: Clip.none,
+        child: SizedBox(
+          width: widget.width,
+          height: widget.height,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              ListView.builder(
+                controller: _scroll,
+                scrollDirection: Axis.horizontal,
+                physics: const ClampingScrollPhysics(),
+                clipBehavior: Clip.none,
+                itemCount: _tickCount + 2,
+                itemBuilder: (ctx, i) {
+                  if (i == 0 || i == _tickCount + 1) return halfWidthPad;
 
-                final tickIndex = i - 1;
-                final tickValue = widget.minValue + tickIndex;
-                // Major ticks every `interval` starting at minValue
-                final isMajor = (tickIndex % widget.interval) == 0;
-                final isMatched =
-                    widget.matchValues?.contains(tickValue) ?? false;
-                final isFirst = tickIndex == 0;
-                final isLast = tickIndex == _tickCount - 1;
+                  final tickIndex = i - 1;
+                  final tickValue = widget.minValue + tickIndex;
+                  // Major ticks every `interval` starting at minValue
+                  final isMajor = (tickIndex % widget.interval) == 0;
+                  final isMatched =
+                      widget.matchValues?.contains(tickValue) ?? false;
+                  final isFirst = tickIndex == 0;
+                  final isLast = tickIndex == _tickCount - 1;
 
-                final String effectiveLabel =
-                    labelMapping.labelsByTickIndex[tickIndex] ??
-                    tickValue.toString();
+                  final String effectiveLabel =
+                      labelMapping.labelsByTickIndex[tickIndex] ??
+                      tickValue.toString();
 
-                final tickWidget = CustomPaint(
-                  painter: _TickPainter(
-                    isMajor: isMajor,
-                    isMatched: isMatched,
-                    label: effectiveLabel,
-                    showLabel:
-                        widget.showLabels && (isMajor || widget.showSubLabels),
-                    labelSpacing: widget.labelSpacing,
-                    labelRotation: widget.labelRotation * math.pi / 180.0,
-                    labelTextStyle:
-                        widget.labelStyle ??
-                        const TextStyle(fontSize: 12, color: Colors.black),
-                    style: widget.tickStyle,
-                    alignment: widget.ticksAlignment,
-                  ),
-                  child: SizedBox(
-                    width: isFirst || isLast ? 0 : widget.tickSpacing,
-                  ),
-                );
-
-                if (isFirst) {
-                  return Row(
-                    children: [
-                      tickWidget,
-                      SizedBox(width: widget.tickSpacing / 2),
-                    ],
+                  final tickWidget = CustomPaint(
+                    painter: _TickPainter(
+                      isMajor: isMajor,
+                      isMatched: isMatched,
+                      label: effectiveLabel,
+                      showLabel:
+                          widget.showLabels &&
+                          (isMajor || widget.showSubLabels),
+                      labelSpacing: widget.labelSpacing,
+                      labelRotation: widget.labelRotation * math.pi / 180.0,
+                      labelTextStyle:
+                          widget.labelStyle ??
+                          const TextStyle(fontSize: 12, color: Colors.black),
+                      labelAlignment: widget.labelAlignment,
+                      style: widget.tickStyle,
+                      alignment: widget.ticksAlignment,
+                    ),
+                    size: Size(
+                      isFirst || isLast ? 0 : widget.tickSpacing,
+                      widget.height,
+                    ),
                   );
-                } else if (isLast) {
-                  return Row(
-                    children: [
-                      SizedBox(width: widget.tickSpacing / 2),
-                      tickWidget,
-                    ],
-                  );
-                } else {
-                  return tickWidget;
-                }
-              },
-            ),
-            Positioned(
-              top: 0,
-              child:
-                  widget.centerIndicator ??
-                  Container(width: 2, height: widget.height, color: Colors.red),
-            ),
-          ],
+
+                  if (isFirst) {
+                    return Row(
+                      children: [
+                        tickWidget,
+                        SizedBox(width: widget.tickSpacing / 2),
+                      ],
+                    );
+                  } else if (isLast) {
+                    return Row(
+                      children: [
+                        SizedBox(width: widget.tickSpacing / 2),
+                        tickWidget,
+                      ],
+                    );
+                  } else {
+                    return tickWidget;
+                  }
+                },
+              ),
+              _buildIndicator(),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _buildIndicator() {
+    final defaultIndicator = Container(
+      width: 2,
+      height: widget.height,
+      color: Colors.red,
+    );
+    final indicator = widget.indicator ?? defaultIndicator;
+
+    switch (widget.ticksAlignment) {
+      case TicksAlignment.top:
+        return Positioned(top: 0, child: indicator);
+      case TicksAlignment.bottom:
+        return Positioned(bottom: 0, child: indicator);
+      case TicksAlignment.center:
+        return Positioned(top: 0, child: indicator);
+    }
   }
 
   @override
@@ -453,6 +488,7 @@ class _TickPainter extends CustomPainter {
   final double labelSpacing;
   final double labelRotation;
   final TextStyle labelTextStyle;
+  final LabelAlignment labelAlignment;
   final TicksStyle style;
   final TicksAlignment alignment;
 
@@ -464,6 +500,7 @@ class _TickPainter extends CustomPainter {
     required this.labelSpacing,
     required this.labelRotation,
     required this.labelTextStyle,
+    required this.labelAlignment,
     required this.style,
     required this.alignment,
   });
@@ -511,25 +548,36 @@ class _TickPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       final dx = (s.width - tp.width) / 2;
-      double dy;
+
+      // First, determine where the major tick ends based on tick alignment
+      double majorTickTopEnd;
+      double majorTickBottomEnd;
+
       switch (alignment) {
         case TicksAlignment.center:
-          // Align labels using the major tick height baseline
-          dy = centerY + style.majorHeight / 2 + labelSpacing;
+          majorTickTopEnd = centerY - style.majorHeight / 2;
+          majorTickBottomEnd = centerY + style.majorHeight / 2;
           break;
         case TicksAlignment.top:
-          // Place labels below the top-aligned ticks
-          dy =
-              (isMatched ? style.matchHeight : style.majorHeight) +
-              labelSpacing;
+          majorTickTopEnd = 0;
+          majorTickBottomEnd = style.majorHeight;
           break;
         case TicksAlignment.bottom:
-          // Place labels above the bottom-aligned ticks
-          dy =
-              s.height -
-              (isMatched ? style.matchHeight : style.majorHeight) -
-              labelSpacing -
-              tp.height;
+          majorTickTopEnd = s.height - style.majorHeight;
+          majorTickBottomEnd = s.height;
+          break;
+      }
+
+      // Then position label relative to the major tick using labelAlignment
+      final double dy;
+      switch (labelAlignment) {
+        case LabelAlignment.bottom:
+          // Place labels below the bottom end of the major tick
+          dy = majorTickBottomEnd + labelSpacing;
+          break;
+        case LabelAlignment.top:
+          // Place labels above the top end of the major tick
+          dy = majorTickTopEnd - labelSpacing - tp.height;
           break;
       }
 
@@ -555,5 +603,7 @@ class _TickPainter extends CustomPainter {
       old.labelSpacing != labelSpacing ||
       old.labelRotation != labelRotation ||
       old.labelTextStyle != labelTextStyle ||
-      old.style != style;
+      old.labelAlignment != labelAlignment ||
+      old.style != style ||
+      old.alignment != alignment;
 }
