@@ -59,6 +59,11 @@ class _RulerExampleState extends State<RulerExample> {
                 ),
                 ticksAlignment: TicksAlignment.top,
                 labelAlignment: LabelAlignment.bottom,
+                enableHapticFeedback: true,
+                hapticSettings: const HapticSettings(
+                  feedbackOnEveryTick: true,
+                  feedbackType: HapticFeedbackType.selection,
+                ),
                 tickStyle: const TicksStyle(
                   majorHeight: 30,
                   minorHeight: 15,

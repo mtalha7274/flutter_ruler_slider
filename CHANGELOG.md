@@ -1,3 +1,10 @@
+## 0.0.6
+- Added haptic feedback support when scrolling through ticks
+- New `enableHapticFeedback` parameter to enable/disable haptic feedback
+- New `HapticSettings` class to configure feedback type and behavior
+- Support for multiple haptic feedback types (light, medium, heavy, selection, vibrate)
+- Option to trigger feedback on every tick or only on major ticks
+
 ## 0.0.5
 - Added `labelAlignment` parameter to control label positioning (top or bottom relative to major ticks)
 - Renamed `centerIndicator` to `indicator` for clarity

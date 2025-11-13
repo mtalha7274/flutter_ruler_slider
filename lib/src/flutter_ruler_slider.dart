@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Styling options for ruler ticks (major, minor, and matched).
 ///
@@ -73,6 +74,62 @@ enum TicksAlignment { center, top, bottom }
 /// - [top]: Labels are positioned above the top edge of major ticks.
 /// - [bottom]: Labels are positioned below the bottom edge of major ticks.
 enum LabelAlignment { top, bottom }
+
+/// Haptic feedback type to trigger when scrolling through ticks.
+///
+/// - [light]: A light impact feedback (suitable for minor ticks).
+/// - [medium]: A medium impact feedback.
+/// - [heavy]: A heavy impact feedback.
+/// - [selection]: A selection feedback (subtle, good for smooth scrolling).
+/// - [vibrate]: Standard vibration feedback.
+enum HapticFeedbackType { light, medium, heavy, selection, vibrate }
+
+/// Settings for haptic feedback when scrolling through ticks.
+///
+/// Configure when and how haptic feedback is triggered as the user scrolls
+/// through the ruler.
+class HapticSettings {
+  /// Whether to trigger haptic feedback on every tick.
+  ///
+  /// When true, feedback is triggered on all ticks (major and minor).
+  /// When false, feedback is only triggered on major ticks.
+  final bool feedbackOnEveryTick;
+
+  /// The type of haptic feedback to use.
+  ///
+  /// Defaults to [HapticFeedbackType.selection] for a subtle feel.
+  final HapticFeedbackType feedbackType;
+
+  /// Creates haptic settings with optional customization.
+  const HapticSettings({
+    this.feedbackOnEveryTick = true,
+    this.feedbackType = HapticFeedbackType.selection,
+  });
+
+  /// Default haptic settings with selection feedback on every tick.
+  static const HapticSettings defaultSettings = HapticSettings();
+
+  /// Trigger the configured haptic feedback.
+  Future<void> trigger() async {
+    switch (feedbackType) {
+      case HapticFeedbackType.light:
+        await HapticFeedback.lightImpact();
+        break;
+      case HapticFeedbackType.medium:
+        await HapticFeedback.mediumImpact();
+        break;
+      case HapticFeedbackType.heavy:
+        await HapticFeedback.heavyImpact();
+        break;
+      case HapticFeedbackType.selection:
+        await HapticFeedback.selectionClick();
+        break;
+      case HapticFeedbackType.vibrate:
+        await HapticFeedback.vibrate();
+        break;
+    }
+  }
+}
 
 /// A horizontally scrollable, snap-capable ruler slider with tick marks and labels.
 ///
@@ -179,6 +236,22 @@ class FlutterRulerSlider extends StatefulWidget {
   /// - If more, trim extras from the end.
   final List<String>? customLabels;
 
+  /// Whether to enable haptic feedback when scrolling through ticks.
+  ///
+  /// When enabled, haptic feedback is triggered each time the selected value
+  /// crosses a tick boundary. Configure the feedback behavior using
+  /// [hapticSettings].
+  final bool enableHapticFeedback;
+
+  /// Settings for haptic feedback behavior.
+  ///
+  /// Only used when [enableHapticFeedback] is true. Allows customization of
+  /// when and what type of haptic feedback is triggered.
+  ///
+  /// Defaults to [HapticSettings.defaultSettings] with selection feedback on
+  /// every tick.
+  final HapticSettings hapticSettings;
+
   /// Creates a [FlutterRulerSlider].
   const FlutterRulerSlider({
     super.key,
@@ -205,6 +278,8 @@ class FlutterRulerSlider extends StatefulWidget {
     this.ticksAlignment = TicksAlignment.center,
     this.matchValues,
     this.customLabels,
+    this.enableHapticFeedback = false,
+    this.hapticSettings = HapticSettings.defaultSettings,
   }) : assert(minValue < maxValue),
        assert(initialValue >= minValue && initialValue <= maxValue),
        assert(smallerInterval > 0);
@@ -216,6 +291,7 @@ class FlutterRulerSlider extends StatefulWidget {
 class _RulerSliderState extends State<FlutterRulerSlider> {
   late final ScrollController _scroll;
   double? _lastValue;
+  int? _lastTickValue;
   Timer? _snapTimer;
 
   int get _tickCount => widget.maxValue - widget.minValue + 1;
@@ -246,6 +322,42 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
         widget.maxValue.toDouble(),
       );
       widget.onValueChanged?.call(_lastValue!);
+
+      // Trigger haptic feedback if enabled
+      if (widget.enableHapticFeedback) {
+        _checkAndTriggerHapticFeedback();
+      }
+    }
+  }
+
+  void _checkAndTriggerHapticFeedback() {
+    if (_lastValue == null) return;
+
+    // Use floor to determine which tick we're currently on or past
+    // This ensures we trigger when crossing the tick boundary, not in the middle
+    final currentTickValue = _lastValue!.floor();
+
+    // Check if we should trigger haptic feedback
+    bool shouldTrigger = false;
+
+    if (widget.hapticSettings.feedbackOnEveryTick) {
+      // Trigger on every tick (integer value change)
+      if (_lastTickValue == null || _lastTickValue != currentTickValue) {
+        shouldTrigger = true;
+      }
+    } else {
+      // Trigger only on major ticks (multiples of interval)
+      if (_lastTickValue == null || _lastTickValue != currentTickValue) {
+        final tickIndex = currentTickValue - widget.minValue;
+        if (tickIndex % widget.interval == 0) {
+          shouldTrigger = true;
+        }
+      }
+    }
+
+    if (shouldTrigger) {
+      _lastTickValue = currentTickValue;
+      widget.hapticSettings.trigger();
     }
   }
 

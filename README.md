@@ -33,7 +33,6 @@ FlutterRulerSlider(
   tickSpacing: 20,
   ticksAlignment: TicksAlignment.center,
   labelAlignment: LabelAlignment.bottom,
-  label
   tickStyle: const TicksStyle(
     majorHeight: 30,
     minorHeight: 15,
@@ -111,3 +110,45 @@ If generated labels are `[0, 10, 20, ..., 90, 100]`, the above becomes `['10','2
 Notes:
 - When `showSubLabels` is true, labels apply to every tick (major and minor). You can still pass fewer labels; they will be extended using the same rule.
 - Labels are rendered as strings; convert values to strings before passing if needed.
+
+### Haptic feedback
+Enable haptic (vibration) feedback when scrolling through ticks for enhanced user experience. Configure the feedback type and when it triggers:
+
+```dart
+FlutterRulerSlider(
+  minValue: 0,
+  maxValue: 100,
+  initialValue: 50,
+  width: 300,
+  enableHapticFeedback: true,
+  hapticSettings: const HapticSettings(
+    feedbackOnEveryTick: true,  // Trigger on all ticks
+    feedbackType: HapticFeedbackType.selection,  // Subtle feedback
+  ),
+)
+```
+
+**Haptic feedback types:**
+- `HapticFeedbackType.selection` (default): Subtle, good for smooth scrolling
+- `HapticFeedbackType.light`: Light impact feedback
+- `HapticFeedbackType.medium`: Medium impact feedback
+- `HapticFeedbackType.heavy`: Heavy impact feedback
+- `HapticFeedbackType.vibrate`: Standard vibration
+
+**Settings:**
+- `feedbackOnEveryTick: true` - Trigger on all ticks (major and minor)
+- `feedbackOnEveryTick: false` - Trigger only on major ticks (multiples of `interval`)
+
+Example for major ticks only:
+```dart
+FlutterRulerSlider(
+  minValue: 0,
+  maxValue: 100,
+  interval: 10,  // Major ticks at 0, 10, 20, 30...
+  enableHapticFeedback: true,
+  hapticSettings: const HapticSettings(
+    feedbackOnEveryTick: false,  // Only on major ticks
+    feedbackType: HapticFeedbackType.medium,
+  ),
+)
+```
