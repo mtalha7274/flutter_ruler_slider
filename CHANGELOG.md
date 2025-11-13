@@ -1,3 +1,7 @@
+## 0.0.7
+
+- Fixed haptic feedback to trigger precisely on tick boundaries regardless of tick spacing
+
 ## 0.0.6
 - Added haptic feedback support when scrolling through ticks
 - New `enableHapticFeedback` parameter to enable/disable haptic feedback

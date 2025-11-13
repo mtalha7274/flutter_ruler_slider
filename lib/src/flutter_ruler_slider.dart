@@ -291,6 +291,7 @@ class FlutterRulerSlider extends StatefulWidget {
 class _RulerSliderState extends State<FlutterRulerSlider> {
   late final ScrollController _scroll;
   double? _lastValue;
+  double? _previousValue;
   int? _lastTickValue;
   Timer? _snapTimer;
 
@@ -317,6 +318,7 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
     final value = widget.minValue + subSteps / widget.smallerInterval;
 
     if (_lastValue == null || (_lastValue! - value).abs() > 1e-6) {
+      _previousValue = _lastValue;
       _lastValue = value.clamp(
         widget.minValue.toDouble(),
         widget.maxValue.toDouble(),
@@ -331,32 +333,54 @@ class _RulerSliderState extends State<FlutterRulerSlider> {
   }
 
   void _checkAndTriggerHapticFeedback() {
-    if (_lastValue == null) return;
-
-    // Use floor to determine which tick we're currently on or past
-    // This ensures we trigger when crossing the tick boundary, not in the middle
-    final currentTickValue = _lastValue!.floor();
-
-    // Check if we should trigger haptic feedback
-    bool shouldTrigger = false;
-
-    if (widget.hapticSettings.feedbackOnEveryTick) {
-      // Trigger on every tick (integer value change)
-      if (_lastTickValue == null || _lastTickValue != currentTickValue) {
-        shouldTrigger = true;
+    if (_lastValue == null || _previousValue == null) {
+      // Initialize on first run
+      if (_lastValue != null) {
+        _lastTickValue = _lastValue!.round();
       }
-    } else {
-      // Trigger only on major ticks (multiples of interval)
-      if (_lastTickValue == null || _lastTickValue != currentTickValue) {
-        final tickIndex = currentTickValue - widget.minValue;
-        if (tickIndex % widget.interval == 0) {
-          shouldTrigger = true;
-        }
+      return;
+    }
+
+    // Detect when we cross an integer tick boundary
+    // by checking if the floor/ceil values changed between previous and current
+    final prevFloor = _previousValue!.floor();
+    final currentFloor = _lastValue!.floor();
+    final prevCeil = _previousValue!.ceil();
+    final currentCeil = _lastValue!.ceil();
+
+    int? crossedTickValue;
+
+    // Moving forward (increasing value)
+    if (_lastValue! > _previousValue!) {
+      if (currentFloor > prevFloor) {
+        crossedTickValue = currentFloor;
+      }
+    }
+    // Moving backward (decreasing value)
+    else if (_lastValue! < _previousValue!) {
+      if (currentCeil < prevCeil) {
+        crossedTickValue = currentCeil;
       }
     }
 
-    if (shouldTrigger) {
-      _lastTickValue = currentTickValue;
+    if (crossedTickValue == null) return;
+
+    // Check if we should trigger haptic feedback for this tick
+    bool shouldTrigger = false;
+
+    if (widget.hapticSettings.feedbackOnEveryTick) {
+      // Trigger on every tick crossing
+      shouldTrigger = true;
+    } else {
+      // Trigger only on major ticks (multiples of interval)
+      final tickIndex = crossedTickValue - widget.minValue;
+      if (tickIndex % widget.interval == 0) {
+        shouldTrigger = true;
+      }
+    }
+
+    if (shouldTrigger && _lastTickValue != crossedTickValue) {
+      _lastTickValue = crossedTickValue;
       widget.hapticSettings.trigger();
     }
   }
